@@ -26,7 +26,6 @@ def getMoviesFromJSON(jsonURL):
 
     return movies
 
-trailerLinksCache = {}
 
 
 class Movie:
@@ -42,16 +41,17 @@ class Movie:
         self.rating = None
         self.actors = []
         self.directors = []
-        self._posterData = None
         self.cached = False
+        self._posterData = None
+        self._trailerLinks = None
 
     @property
     def trailerLinks(self):
         trailerHTMLURL = "http://trailers.apple.com%sincludes/playlists/web.inc" % \
             (self.baseURL)
-        if trailerLinksCache.has_key(trailerHTMLURL):
-            return trailerLinksCache[trailerHTMLURL]
-        
+        if self._trailerLinks is not None:
+            return self._trailerLinks
+
         response = urllib.urlopen(trailerHTMLURL)
 
         trailersHTML = response.read()
@@ -66,7 +66,6 @@ class Movie:
                 else:
                     url = re.sub('(.*)/([^/]*)_([^/]*)',r'\1/\2_h\3', url)
                 self._trailerLinks.append(url)
-        trailerLinksCache[trailerHTMLURL] = self._trailerLinks
         return self._trailerLinks
     
     @property
