@@ -114,9 +114,8 @@ class PyTrailerWidget(QWidget):
 
     def refreshMovies(self):
         changed = False
-        if not self.readAheadDoneQueue.empty():
+        while not self.readAheadDoneQueue.empty():
             i, updatedMovie = self.readAheadDoneQueue.get_nowait()
-            t0 = time.time()
             oldMovie = self.movieList[i]
             oldMovie.poster = updatedMovie.poster
             oldMovie.trailerLinks = updatedMovie.trailerLinks
@@ -125,7 +124,6 @@ class PyTrailerWidget(QWidget):
                 w = self.movieDict[oldMovie.title]
                 if w is not None:
                     w.refresh()
-            print "Spent: %f" % (time.time() - t0)
 
 
 def movieReadAhead(taskQueue, doneQueue):
