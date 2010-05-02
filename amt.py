@@ -65,15 +65,17 @@ class Movie:
                     url = re.sub('(.*)/([^/]*)_h.([^/]*)',r'\1/\2_h\3', url)
                 else:
                     url = re.sub('(.*)/([^/]*)_([^/]*)',r'\1/\2_h\3', url)
+
+                url = re.sub('_hh','_h', url)
                 self._trailerLinks.append(url)
         return self._trailerLinks
-    
+
     @property
     def poster(self):
         if self._posterData is not None:
             return self._posterData
 
-        
+
         print "%d downloading %s" % (os.getpid(),self.posterURL)
         response = urllib.urlopen(self.posterURL)
         self._posterData = response.read()
