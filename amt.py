@@ -27,7 +27,6 @@ def getMoviesFromJSON(jsonURL):
     return movies
 
 trailerLinksCache = {}
-posterCache = {}
 
 
 class Movie:

@@ -1,7 +1,9 @@
 import sys
+import os
 import pickle
 import time
 from multiprocessing import Process, Queue
+import subprocess
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
@@ -19,8 +21,8 @@ categories = {'Just added':'/trailers/home/feeds/just_added.json',
 class PyTrailerWidget(QWidget):
     def __init__(self, *args):
         QWidget.__init__(self, *args)
-
-        READ_AHEAD_PROC=1
+        READ_AHEAD_PROC=4
+        self.movieDict = {}
         self.readAheadTaskQueue = Queue()
         self.readAheadDoneQueue = Queue()
 
@@ -32,9 +34,13 @@ class PyTrailerWidget(QWidget):
             p.start()
             self.readAheadProcess.append(p)
 
+        self.init_widget()
+
+    def init_widget(self):
+
         self.refreshTimer = QTimer(self)
         self.refreshTimer.timeout.connect(self.refreshMovies)
-        self.refreshTimer.start()
+        self.refreshTimer.start(500)
         self.setWindowTitle("PyTrailer - Apple Trailer Downloader")
 
         hbox = QHBoxLayout()
@@ -47,38 +53,60 @@ class PyTrailerWidget(QWidget):
             hbox.addWidget(but)
 
         group.buttonClicked.connect(self.groupChange)
+
+        self.scrollArea = QScrollArea(self)
+        scrollArea = self.scrollArea
+        self.scrolledWidget = QWidget(self)
+        scrolledWidget = self.scrolledWidget
+        self.hackTmp = scrolledWidget
+        scrollArea.setSizePolicy(QSizePolicy.Ignored,
+                QSizePolicy.Ignored)
+
         vbox = QVBoxLayout()
         vbox.addLayout(hbox)
-
-        self.movieModel = MovieListModel(self)
-        self.paintDelegate = MoviePaintDelegate(self)
-
-        self.movieListView = QListView()
-        self.movieListView.setModel(self.movieModel)
+        vbox.addWidget(scrollArea)
+        mlistLayout = QVBoxLayout()
+        scrolledWidget.setLayout(mlistLayout)
+        scrollArea.setWidget(scrolledWidget)
+        scrollArea.setWidgetResizable(True)
+        scrollArea.setMinimumSize(QSize(400,150))
+        self.mainArea = mlistLayout
         self.loadGroup("Just added")
 
-        self.movieListView.setItemDelegate(self.paintDelegate)
 
         shortcut = QShortcut(QKeySequence(self.tr("Ctrl+Q", "File|Quit")),
                           self);
         self.connect(shortcut, SIGNAL('activated()'), SLOT('close()'))
 
-        vbox.addWidget(self.movieListView)
         self.setLayout(vbox)
 
 
     def groupChange(self, button):
         self.loadGroup(str(button.text()))
 
-    def loadGroup(self, groupName):
-        url = "http://trailers.apple.com%s" % categories[groupName]
-        managedList = amt.getMoviesFromJSON(url)
-        self.movieModel.setMovies(managedList)
+    def unloadCurrentGroup(self):
         while not self.readAheadTaskQueue.empty():
             self.readAheadTaskQueue.get()
-            
-        for i in range(len(managedList)):
-            self.readAheadTaskQueue.put((i, managedList[i]))
+
+        widget = self.mainArea.takeAt(0)
+        while widget != None:
+            widget = widget.widget()
+            self.movieDict.pop(widget.movie.title)
+            widget.close()
+            widget = self.mainArea.takeAt(0)
+
+    def loadGroup(self, groupName):
+        self.unloadCurrentGroup()
+
+        url = "http://trailers.apple.com%s" % categories[groupName]
+        self.movieList = amt.getMoviesFromJSON(url)
+        for i in range(len(self.movieList)):
+            self.readAheadTaskQueue.put((i, self.movieList[i]))
+
+        for movie in self.movieList:
+            w=MovieItemWidget(movie, self.scrollArea)
+            self.movieDict[movie.title] = w
+            self.mainArea.addWidget(w)
 
     def closeEvent(self, closeEvent):
         for p in self.readAheadProcess:
@@ -89,14 +117,15 @@ class PyTrailerWidget(QWidget):
         if not self.readAheadDoneQueue.empty():
             i, updatedMovie = self.readAheadDoneQueue.get_nowait()
             t0 = time.time()
-            oldMovie = self.movieModel.listdata[i]
+            oldMovie = self.movieList[i]
             oldMovie.poster = updatedMovie.poster
             oldMovie.trailerLinks = updatedMovie.trailerLinks
             oldMovie.cached = True
-            changed = True
+            if self.movieDict.has_key(oldMovie.title):
+                w = self.movieDict[oldMovie.title]
+                if w is not None:
+                    w.refresh()
             print "Spent: %f" % (time.time() - t0)
-        if changed:
-            self.movieModel.updated()
 
 
 def movieReadAhead(taskQueue, doneQueue):
@@ -115,89 +144,81 @@ class CategoryPushButton(QPushButton):
         QPushButton.__init__(self, text, parent)
         self.jsonLink = jsonLink
 
+class MovieItemWidget(QFrame):
+    def __init__(self, movie, *args):
+        QWidget.__init__(self, *args)
 
-class MoviePaintDelegate(QItemDelegate):
-    def __init__(self, parent=None, *args):
-        QItemDelegate.__init__(self, parent, *args)
+        self.movie = movie
 
-    def paint(self, painter, option, index):
-        painter.save()
+        self.titlebox = QHBoxLayout()
+        titleLabel = QLabel("<h2>%s</h2>" % movie.title, self)
+        self.setFrameStyle(QFrame.Panel | QFrame.Sunken);
 
-        # set background color
-        painter.setPen(QPen(Qt.NoPen))
-        if option.state & QStyle.State_Selected:
-            painter.setBrush(QBrush(Qt.gray))
-        else:
-            painter.setBrush(QBrush(Qt.white))
-        painter.drawRect(option.rect)
+        self.titlebox.addWidget(titleLabel)
+        self.titlebox.addStretch(1)
 
-        # set text color
-        painter.setPen(QPen(Qt.black))
-        value = index.data(Qt.UserRole)
-        if value.isValid():
-            ba = value.toByteArray()
-            m = pickle.loads(ba)
-            posterImg = QImage()
-            option.rect.setLeft(option.rect.left()+10)
-            if m.cached == True:
-                if posterImg.loadFromData(m.poster) is True :
-                    posterRect = QRect(option.rect)
-                    posterRect.setWidth(90)
-                    posterRect.setHeight(130)
-                    posterRect.setTop(posterRect.top()+20)
-                    painter.drawImage(posterRect, posterImg)
+        middleArea = QHBoxLayout()
+        self.posterLabel = QLabel("<img src=""/>", self)
+        self.posterLabel.setMinimumSize(QSize(134,193))
+        self.posterLabel.setMaximumSize(QSize(134,193))
 
-                    trailerRect=QRect(option.rect)
+        mainArea = QVBoxLayout()
+        self.mainArea = mainArea
+        directors = QLabel("<b>Director(s): </b>%s" % ", ".join([movie.directors]))
+        mainArea.addWidget(directors)
+        actors = QLabel("<b>Actors: </b>%s" % ", ".join(movie.actors))
+        mainArea.addWidget(actors)
+        actors.setWordWrap(True)
+        mainArea.addStretch(1)
 
-                    trailerRect.setLeft(trailerRect.left()+ 100)
-                    trailerRect.setTop(trailerRect.top() + 20)
-                    trailerRect.setWidth(700)
-                    trailerNames = []
-                    for trailerLink in m.trailerLinks:
-                        label = '%s' % trailerLink
-                        trailerNames.append(label)
-                        painter.drawText(trailerRect, Qt.AlignLeft, "\n".join(trailerNames))
-
-            fn = painter.font()
-            fn.setWeight(QFont.Bold)
-            painter.setFont(fn)
-            painter.drawText(option.rect, Qt.AlignLeft, m.title)
-        else:
-            painter.drawText(option.rect, Qt.AlignLeft, "Error")
-
-        painter.restore()
-
-    def sizeHint(self, option, index):
-        return QSize(100,150)
+        middleArea.addWidget(self.posterLabel)
+        middleArea.addLayout(mainArea)
 
 
-class MovieListModel(QAbstractListModel):
-    def __init__(self, parent=None, *args):
-        """ movies: a list where each item is one amt.Movie
-        """
-        QAbstractListModel.__init__(self, parent, *args)
-        
-    def rowCount(self, parent=QModelIndex()):
-        return len(self.listdata)
+        topLevelLayout = QVBoxLayout()
+        topLevelLayout.addLayout(self.titlebox)
+        topLevelLayout.addLayout(middleArea)
+        topLevelLayout.addStretch(1)
+        self.setMinimumSize(400,150)
+        self.setLayout(topLevelLayout)
 
-    def data(self, index, role):
-        if index.isValid() and role == Qt.UserRole:
-            self.listdata[index.row()].poster
-            tmp = pickle.dumps(self.listdata[index.row()], 0)
-            return QVariant(tmp)
-        else:
-            return QVariant()
+    def refresh(self):
+        movie = self.movie
 
-    def setMovies(self, movies):
-        self.listdata = movies
-        
-    def updated(self):
-        self.emit(SIGNAL("dataChanged(1,1000)"))
+        posterImage = QImage()
+        posterImage.loadFromData(movie.poster)
+        self.posterLabel.setPixmap(QPixmap.fromImage(posterImage))
+
+        self.downloadButtons = QButtonGroup()
+        self.downloadButtons.buttonClicked.connect(self.downloadClicked)
+        links = 0
+        for trailerLink in movie.trailerLinks:
+            label = '%s' % trailerLink.split('/')[-1]
+            label = label[:label.rindex('.mov')]
+            lab = QLabel('<a href="%s">%s</a>' % (trailerLink, label),self)
+            hbox= QHBoxLayout()
+            button=QPushButton("Download")
+            self.downloadButtons.addButton(button, links)
+            hbox.addStretch(1)
+            hbox.addWidget(lab)
+            hbox.addWidget(button)
+            button=QPushButton("View")
+            hbox.addWidget(button)
+            self.mainArea.addLayout(hbox)
+            links = links + 1
+
+    def downloadClicked(self, button):
+        id = self.downloadButtons.id(button)
+        print id
+        os.chdir('/data/downloads/torrents')
+        subprocess.Popen(['wget','-U','QuickTime/7.6.2 (qtver=7.6.2;os=Windows NT 5.1Service Pack 3)', self.movie.trailerLinks[id]])
+
 
 app = QApplication(sys.argv)
 
 widget = PyTrailerWidget()
 widget.resize(800, 600)
-widget.setWindowTitle('simple')
 widget.show()
+
+
 sys.exit(app.exec_())
