@@ -9,7 +9,7 @@ def getMoviesFromJSON(jsonURL):
     response = urllib.urlopen(jsonURL)
     jsonData = response.read()
     objects = json.loads(jsonData)
-    optionalInfo = ['actors','directors','rating','genre','studio','releasedata']
+    optionalInfo = ['actors','directors','rating','genre','studio','releasedate']
     movies = []
     for obj in objects:
         movie = Movie()
@@ -32,7 +32,7 @@ class Movie:
 
     def __init__(self):
         self.title = None
-        self.releaseDate = None
+        self.releasedate = None
         self.studio = None
         self.posterURL = None
         self.baseURL = None
