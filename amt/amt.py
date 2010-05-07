@@ -44,12 +44,13 @@ class Movie:
         self.cached = False
         self._posterData = None
         self._trailerLinks = None
+        self._description = None
 
     @property
     def trailerLinks(self):
         trailerHTMLURL = "http://trailers.apple.com%sincludes/playlists/web.inc" % \
             (self.baseURL)
-        if self._trailerLinks is not None:
+        if self._trailerLinks:
             return self._trailerLinks
 
         response = urllib.urlopen(trailerHTMLURL)
@@ -72,7 +73,7 @@ class Movie:
 
     @property
     def poster(self):
-        if self._posterData is not None:
+        if self._posterData:
             return self._posterData
 
 
@@ -81,7 +82,19 @@ class Movie:
         self._posterData = response.read()
         return self._posterData
 
+    @property
+    def description(self):
+        if self._description:
+            return self._description
 
-
-
-
+        trailerURL= "http://trailers.apple.com%s" % self.baseURL
+        response = urllib.urlopen(trailerURL)
+        trailerHTML = response.read()
+        description = re.search('<meta *name="Description" *content="(.*?)" *[/]*>'
+                                ,trailerHTML)
+        if description:
+            description = description.group(1)
+            self._description = description
+        else:
+            self._description = "None"
+        return self._description
