@@ -76,8 +76,6 @@ class Movie:
         if self._posterData:
             return self._posterData
 
-
-        print "%d downloading %s" % (os.getpid(),self.posterURL)
         response = urllib.urlopen(self.posterURL)
         self._posterData = response.read()
         return self._posterData
