@@ -63,11 +63,12 @@ class Movie:
                 url=url[1:-1]
                 subPos = url.rfind('_')
                 if subPos == url.rfind('_h.'):
-                    url = re.sub('(.*)/([^/]*)_h.([^/]*)',r'\1/\2_h\3', url)
+                    url = re.sub('(.*)/([^/]*)_h.([^/]*mov).*',r'\1/\2_h\3', url)
                 else:
-                    url = re.sub('(.*)/([^/]*)_([^/]*)',r'\1/\2_h\3', url)
+                    url = re.sub('(.*)/([^/]*)_([^/]*mov).*',r'\1/\2_h\3', url)
 
                 url = re.sub('_hh','_h', url)
+                url = re.sub('h640','h640w', url)
                 self._trailerLinks.append(url)
         return self._trailerLinks
 
