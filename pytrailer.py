@@ -1,9 +1,7 @@
 import json
 import urllib2 as urllib
-import sys
 import re
-import multiprocessing
-import os
+from HTMLParser import HTMLParser
 
 def getMoviesFromJSON(jsonURL):
     response = urllib.urlopen(jsonURL)
@@ -54,22 +52,10 @@ class Movie:
             return self._trailerLinks
 
         response = urllib.urlopen(trailerHTMLURL)
+        wip = WebIncParser()
 
         trailersHTML = response.read()
-        trailerURLS = re.findall('"http:.*?"',trailersHTML)
-        self._trailerLinks = []
-        for url in trailerURLS:
-            if url.find('.mov') != -1:
-                url=url[1:-1]
-                subPos = url.rfind('_')
-                if subPos == url.rfind('_h.'):
-                    url = re.sub('(.*)/([^/]*)_h.([^/]*mov).*',r'\1/\2_h\3', url)
-                else:
-                    url = re.sub('(.*)/([^/]*)_([^/]*mov).*',r'\1/\2_h\3', url)
-
-                url = re.sub('_hh','_h', url)
-                url = re.sub('h640','h640w', url)
-                self._trailerLinks.append(url)
+        self._trailerLinks = wip.getTrailers(trailersHTML)
         return self._trailerLinks
 
     @property
@@ -97,3 +83,55 @@ class Movie:
         else:
             self._description = "None"
         return self._description
+
+class WebIncParser(HTMLParser):
+    H3 = 1
+    URLS = 2
+
+    def getTrailers(self, data):
+        self.trailers = {}
+        self.dirtyURLS = []
+        self.next_title = None
+        self.pos = 0
+        self.feed(data)
+        self.close()
+        if len(self.trailers) == 1:
+            val = self.trailers[self.trailers.keys()[0]]
+            if len(val) == 0:
+                self.trailers[self.trailers.keys()[0]] = self.dirtyURLS
+        return self.trailers
+
+    def _add_url(self, name, url):
+        if self.pos == self.URLS:
+            self.trailers[name].append(url)
+        else:
+            self.dirtyURLS.append(url)
+
+    def handle_starttag(self, tag, attrs):
+        if tag.lower() == 'h3':
+            self.pos = self.H3
+        elif tag.lower() == 'a':
+            for name, val in attrs:
+                if name == 'href' and val.find('.mov') != -1:
+                    url = val
+                    subPos = url.rfind('_')
+                    if subPos == url.rfind('_h.'):
+                        url = re.sub('(.*)/([^/]*)_h.([^/]*mov).*',r'\1/\2_h\3', url)
+                    else:
+                        url = re.sub('(.*)/([^/]*)_([^/]*mov).*',r'\1/\2_h\3', url)
+
+                    url = re.sub('_hh','_h', url)
+                    url = re.sub('h640','h640w', url)
+                    self._add_url(self.next_title, url)
+
+    def handle_data(self, data):
+        if self.pos == self.H3:
+            if data in self.trailers.keys():
+                self.handle_data("%s_1" % data)
+            self.trailers[data]=[]
+            self.next_title = data
+
+    def handle_endtag(self, tag):
+        if tag.lower() == 'h3':
+            self.pos = self.URLS
+
