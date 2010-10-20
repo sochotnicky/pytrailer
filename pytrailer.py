@@ -1,7 +1,14 @@
 import json
-import urllib2 as urllib
+try:
+    import urllib2 as urllib
+    urllib.request = urllib
+
+    from HTMLParser import HTMLParser
+except ImportError:
+    # python3.x
+    import urllib.request, urllib.error, urllib.parse
+    from html.parser import HTMLParser
 import re
-from HTMLParser import HTMLParser
 
 def getMoviesFromJSON(jsonURL):
     """Main function for this library
@@ -31,8 +38,8 @@ def getMoviesFromJSON(jsonURL):
     Please take care when trying to access these fields as they may
     not exist.
     """
-    response = urllib.urlopen(jsonURL)
-    jsonData = response.read()
+    response = urllib.request.urlopen(jsonURL)
+    jsonData = response.read().decode('utf-8')
     objects = json.loads(jsonData)
     optionalInfo = ['actors','directors','rating','genre','studio','releasedate']
     movies = []
@@ -84,10 +91,10 @@ class Movie:
         if self._trailerLinks:
             return self._trailerLinks
 
-        response = urllib.urlopen(trailerHTMLURL)
+        response = urllib.request.urlopen(trailerHTMLURL)
         wip = WebIncParser()
 
-        trailersHTML = response.read()
+        trailersHTML = response.read().decode('utf-8')
         self._trailerLinks = wip.getTrailers(trailersHTML)
         return self._trailerLinks
 
@@ -101,7 +108,7 @@ class Movie:
         if self._posterData:
             return self._posterData
 
-        response = urllib.urlopen(self.posterURL)
+        response = urllib.request.urlopen(self.posterURL)
         self._posterData = response.read()
         return self._posterData
 
@@ -116,8 +123,8 @@ class Movie:
             return self._description
 
         trailerURL= "http://trailers.apple.com%s" % self.baseURL
-        response = urllib.urlopen(trailerURL)
-        trailerHTML = response.read()
+        response = urllib.request.urlopen(trailerURL)
+        trailerHTML = response.read().decode('utf-8')
         description = re.search('<meta *name="Description" *content="(.*?)" *[/]*>'
                                 ,trailerHTML)
         if description:
