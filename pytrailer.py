@@ -44,7 +44,7 @@ def getMoviesFromJSON(jsonURL):
         movie.trailers = obj['trailers']
 
         for i in optionalInfo:
-            if obj.has_key(i):
+            if i in obj:
                 setattr(movie, i, obj[i])
 
         movies.append(movie)
@@ -161,9 +161,9 @@ class WebIncParser(HTMLParser):
         self.feed(data)
         self.close()
         if len(self.trailers) == 1:
-            val = self.trailers[self.trailers.keys()[0]]
+            val = self.trailers[list(self.trailers.keys())[0]]
             if len(val) == 0:
-                self.trailers[self.trailers.keys()[0]] = self.dirtyURLS
+                self.trailers[list(self.trailers.keys())[0]] = self.dirtyURLS
         return self.trailers
 
     def _add_url(self, name, url):
@@ -191,7 +191,7 @@ class WebIncParser(HTMLParser):
 
     def handle_data(self, data):
         if self.pos == self.H3:
-            if data in self.trailers.keys():
+            if data in list(self.trailers.keys()):
                 self.handle_data("%s_1" % data)
             self.trailers[data]=[]
             self.next_title = data
