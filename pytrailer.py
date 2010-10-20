@@ -71,8 +71,7 @@ class Movie:
         self._trailerLinks = None
         self._description = None
 
-    @property
-    def trailerLinks(self):
+    def get_trailerLinks(self):
         """Returns dictionary with trailer names as keys and list of
         trailer urls as values. Each trailer can have more links due
         to different qualities.
@@ -92,8 +91,12 @@ class Movie:
         self._trailerLinks = wip.getTrailers(trailersHTML)
         return self._trailerLinks
 
-    @property
-    def poster(self):
+    def set_trailerLinks(self, val):
+        self._trailerLinks = val
+
+    trailerLinks = property(get_trailerLinks, set_trailerLinks)
+
+    def get_poster(self):
         """Returns poster data itself (as in JPEG/GIF/PNG file)"""
         if self._posterData:
             return self._posterData
@@ -102,8 +105,12 @@ class Movie:
         self._posterData = response.read()
         return self._posterData
 
-    @property
-    def description(self):
+    def set_poster(self, val):
+        self._posterData = val
+
+    poster = property(get_poster, set_poster)
+
+    def get_description(self):
         """Returns description text as provided by the studio"""
         if self._description:
             return self._description
@@ -119,6 +126,11 @@ class Movie:
         else:
             self._description = "None"
         return self._description
+
+    def set_description(self, val):
+        self._description = val
+
+    description = property(get_description, set_description)
 
 class WebIncParser(HTMLParser):
     """Class for parsing data from web.inc html files that exist for
