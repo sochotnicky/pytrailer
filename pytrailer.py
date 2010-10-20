@@ -4,6 +4,33 @@ import re
 from HTMLParser import HTMLParser
 
 def getMoviesFromJSON(jsonURL):
+    """Main function for this library
+
+    Returns list of Movie classes from apple.com/trailers json URL
+    such as: http://trailers.apple.com/trailers/home/feeds/just_added.json
+
+    The Movie classes use lazy loading mechanisms so that data not
+    directly available from JSON are loaded on demand. Currently these
+    lazy loaded parts are:
+     * poster
+     * trailerLinks
+     * description
+
+    Be warned that accessing these fields can take long time due to
+    network access. Therefore do the loading in thread separate from
+    UI thread or your users will notice.
+
+    There are optional fields that may or may not be present in every
+    Movie instance. These include:
+     * actors
+     * directors
+     * rating
+     * genre
+     * studio
+     * releasedate
+    Please take care when trying to access these fields as they may
+    not exist.
+    """
     response = urllib.urlopen(jsonURL)
     jsonData = response.read()
     objects = json.loads(jsonData)
@@ -27,13 +54,20 @@ def getMoviesFromJSON(jsonURL):
 
 
 class Movie:
+    """Main class representing all trailers for single Movie
+
+    Most fields should be self-descriptive
+    """
 
     def __init__(self):
         self.title = None
         self.releasedate = None
         self.studio = None
+        # URL of poster for the movie
         self.posterURL = None
+        # base URL of movie such as "/trailers/magnolia/nightcatchesus/"
         self.baseURL = None
+        # trailers as present in JSON URL (not used)
         self.trailers = []
         self.genre = None
         self.rating = None
@@ -46,6 +80,13 @@ class Movie:
 
     @property
     def trailerLinks(self):
+        """Returns dictionary with trailer names as keys and list of
+        trailer urls as values. Each trailer can have more links due
+        to different qualities.
+
+        Example:
+        {'Trailer':['url1','url2'],'Featurette':['url1','url2']}
+        """
         trailerHTMLURL = "http://trailers.apple.com%sincludes/playlists/web.inc" % \
             (self.baseURL)
         if self._trailerLinks:
@@ -60,6 +101,7 @@ class Movie:
 
     @property
     def poster(self):
+        """Returns poster data itself (as in JPEG/GIF/PNG file)"""
         if self._posterData:
             return self._posterData
 
@@ -69,6 +111,7 @@ class Movie:
 
     @property
     def description(self):
+        """Returns description text as provided by the studio"""
         if self._description:
             return self._description
 
@@ -85,10 +128,27 @@ class Movie:
         return self._description
 
 class WebIncParser(HTMLParser):
+    """Class for parsing data from web.inc html files that exist for
+    every Movie
+
+    Each movie has associated web.inc file that contains pieces of
+    html containing trailer names (as in "Trailer", "Featurette"
+    etc) and links to trailers themselves.
+    """
+
     H3 = 1
     URLS = 2
 
     def getTrailers(self, data):
+        """Returns dictionary with trailer names as keys and list of
+        trailer urls as values. Each trailer can have more links due
+        to different qualities.
+
+        data - HTML page containing Trailer names/links
+
+        Example:
+        {'Trailer':['url1','url2'],'Featurette':['url1','url2']}
+        """
         self.trailers = {}
         self.dirtyURLS = []
         self.next_title = None
