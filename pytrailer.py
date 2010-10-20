@@ -22,12 +22,12 @@ def getMoviesFromJSON(jsonURL):
 
     There are optional fields that may or may not be present in every
     Movie instance. These include:
-     * actors
-     * directors
-     * rating
-     * genre
-     * studio
-     * releasedate
+     * actors (list)
+     * directors (list)
+     * rating (string)
+     * genre (string)
+     * studio (string)
+     * releasedate (sring)
     Please take care when trying to access these fields as they may
     not exist.
     """
@@ -61,19 +61,12 @@ class Movie:
 
     def __init__(self):
         self.title = None
-        self.releasedate = None
-        self.studio = None
         # URL of poster for the movie
         self.posterURL = None
         # base URL of movie such as "/trailers/magnolia/nightcatchesus/"
         self.baseURL = None
         # trailers as present in JSON URL (not used)
         self.trailers = []
-        self.genre = None
-        self.rating = None
-        self.actors = []
-        self.directors = []
-        self.cached = False
         self._posterData = None
         self._trailerLinks = None
         self._description = None
