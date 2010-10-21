@@ -1,0 +1,30 @@
+2010-10-21  Version 0.4.0  Stanislav Ochotnicky <sochotnicky@gmail.com>
+
+	Features added:
+	* Python 3.x support
+	* Added documentation
+
+
+2010-10-15  Version 0.3.1  Stanislav Ochotnicky <sochotnicky@gmail.com>
+
+	Bugs fixed:
+	* Add MANIFEST.in to include README and LICENSE in sdist
+
+	Features added:
+	* Added README
+
+2010-05-18  Version 0.3  Stanislav Ochotnicky <sochotnicky@gmail.com>
+
+	Features added:
+	* Improve parsing of web.inc with support for getting title of
+          trailer with links
+
+2010-05-14  Version 0.2  Stanislav Ochotnicky <sochotnicky@gmail.com>
+
+	Bugs fixed:
+	* Fix non-HD links
+
+
+2010-05-10  Version 0.1  Stanislav Ochotnicky <sochotnicky@gmail.com>
+
+	First release
