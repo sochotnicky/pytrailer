@@ -1,8 +1,32 @@
 Pytrialer module came to be when I wanted to download movies from
 apple.com/trailers on my Linux desktop. As a user you probably want
-graphical interface (look up "pyqtrailer").
+graphical interface (http://github.com/sochotnicky/pyqtrailer).
 
 Pytrailer is very simple python module using JSON and few simple
 regular expressions to simplify access to trailer information on
-www.apple.com/trailers. It needs some more love currently (especially
-domcumenting interface a bit), but is functional otherwise.
+www.apple.com/trailers.
+
+== Author ==
+Stanislav Ochotnicky (sochotnicky@gmail.com)
+
+== License ==
+
+This module is released under GNU LGPLv3. See LICENSE file for details
+
+== Requirements ==
+
+    * Python 2.6+ (including Python 3.x)
+
+== Installation ==
+
+Releases are made using pypi.python.org. If your distribution doesn't
+provide packages for you easiest way to install pytrailer on most
+Linux distributions is:
+
+ $ easy_install pytrailer
+
+You can verify it worked by doing
+ $ python
+ >>> import pytrailer
+ >>>
+
