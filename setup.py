@@ -13,6 +13,6 @@ setup(name='pytrailer',
                    'Topic :: Software Development :: Libraries',
                    'Topic :: Multimedia :: Video'],
       keywords="movie trailer apple module",
-      license="LGPL",
+      license="LGPL-3",
       platforms=["any"],
      )

@@ -1,4 +1,5 @@
 import json
+import re
 try:
     import urllib2 as urllib
     urllib.request = urllib
@@ -8,7 +9,6 @@ except ImportError:
     # python3.x
     import urllib.request, urllib.error, urllib.parse
     from html.parser import HTMLParser
-import re
 
 def getMoviesFromJSON(jsonURL):
     """Main function for this library
@@ -41,6 +41,9 @@ def getMoviesFromJSON(jsonURL):
     response = urllib.request.urlopen(jsonURL)
     jsonData = response.read().decode('utf-8')
     objects = json.loads(jsonData)
+    # make it work for search urls
+    if jsonURL.find('quickfind') != -1:
+        objects = objects['results']
     optionalInfo = ['actors','directors','rating','genre','studio','releasedate']
     movies = []
     for obj in objects:
