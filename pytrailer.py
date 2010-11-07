@@ -51,6 +51,9 @@ def getMoviesFromJSON(jsonURL):
         movie.title = obj['title']
         movie.baseURL = obj['location']
         movie.posterURL = obj['poster']
+        # sometimes posters don't have http part
+        if movie.posterURL.find('http:') == -1:
+            movie.posterURL = "http://apple.com%s" % movie.posterURL
         movie.trailers = obj['trailers']
 
         for i in optionalInfo:
