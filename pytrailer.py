@@ -1,3 +1,4 @@
+import codecs
 import json
 import re
 try:
@@ -128,22 +129,27 @@ class Movie:
         if self._description:
             return self._description
 
-        trailerURL= "http://trailers.apple.com%s" % self.baseURL
-        response = urllib.request.urlopen(trailerURL)
-        trailerHTML = response.read().decode('utf-8')
-        description = re.search('<meta *name="Description" *content="(.*?)" *[/]*>'
-                                ,trailerHTML)
-        if description:
-            description = description.group(1)
-            self._description = description
-        else:
-            self._description = "None"
+        try:
+            trailerURL= "http://trailers.apple.com%s" % self.baseURL
+            response = urllib.request.urlopen(trailerURL)
+            Reader = codecs.getreader("utf-8")
+            responseReader = Reader(response)
+            trailerHTML = responseReader.read()
+            description = re.search('<meta *name="Description" *content="(.*?)" *[/]*>'
+                                    ,trailerHTML)
+            if description:
+                self._description = description.group(1)
+            else:
+                self._description = "None"
+        except:
+            self._description = "Error"
         return self._description
 
     def set_description(self, val):
         self._description = val
 
     description = property(get_description, set_description)
+
 
 class WebIncParser(HTMLParser):
     """Class for parsing data from web.inc html files that exist for
