@@ -1,6 +1,8 @@
 import codecs
 import json
 import re
+import locale
+from time import mktime
 try:
     import urllib2 as urllib
     urllib.request = urllib
@@ -10,6 +12,9 @@ except ImportError:
     # python3.x
     import urllib.request, urllib.error, urllib.parse
     from html.parser import HTMLParser
+
+import dateutil.parser as dparser
+
 
 def getMoviesFromJSON(jsonURL):
     """Main function for this library
@@ -149,6 +154,19 @@ class Movie:
         self._description = val
 
     description = property(get_description, set_description)
+
+    def get_latest_trailer_date(self):
+        """Returns date (unix timestamp) of latest trailer for this movie
+        """
+        tsMax = 0
+        for trailer in self.trailers:
+            locale.setlocale(locale.LC_ALL, "C")
+            pdate = dparser.parse(trailer['postdate'])
+            locale.resetlocale()
+            ts = mktime(pdate.timetuple())
+            if ts > tsMax:
+                tsMax = ts
+        return tsMax
 
 
 class WebIncParser(HTMLParser):
