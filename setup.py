@@ -1,7 +1,7 @@
 from distutils.core import setup
 
 setup(name='pytrailer',
-      version='0.5.0',
+      version='0.6.0',
       description='Module to simplify access to movies on apple.com/trailers',
       author='Stanislav Ochotnicky',
       author_email='sochotnicky@gmail.com',
