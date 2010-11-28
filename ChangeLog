@@ -1,3 +1,11 @@
+2010-11-28  Version 0.6.0 Stanislav Ochotnicky  <sochotnicky@gmail.com>
+
+	Features added:
+	* Add function to get latest modification date of trailer
+
+	Bugs fixed:
+	* UTF-8 decode errors in some descriptions (ignore for now)
+
 2010-11-09  Version 0.5.0 Stanislav Ochotnicky  <sochotnicky@gmail.com>
 
 	Features added:
