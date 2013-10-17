@@ -2,6 +2,7 @@ import codecs
 import json
 import re
 import locale
+import logging
 from time import mktime
 try:
     import urllib2 as urllib
@@ -72,7 +73,7 @@ def getMoviesFromJSON(jsonURL):
 
 
 
-class Movie:
+class Movie(object):
     """Main class representing all trailers for single Movie
 
     Most fields should be self-descriptive
@@ -98,16 +99,13 @@ class Movie:
         Example:
         {'Trailer':['url1','url2'],'Featurette':['url1','url2']}
         """
-        trailerHTMLURL = "http://trailers.apple.com%sincludes/playlists/web.inc" % \
-            (self.baseURL)
         if self._trailerLinks:
             return self._trailerLinks
 
-        response = urllib.request.urlopen(trailerHTMLURL)
-        wip = WebIncParser()
+        wip = WebIncParser("http://trailers.apple.com" + self.baseURL,
+                           "includes/playlists/web.inc")
 
-        trailersHTML = response.read().decode('utf-8')
-        self._trailerLinks = wip.getTrailers(trailersHTML)
+        self._trailerLinks = wip.getTrailers()
         return self._trailerLinks
 
     def set_trailerLinks(self, val):
@@ -181,7 +179,20 @@ class WebIncParser(HTMLParser):
     H3 = 1
     URLS = 2
 
-    def getTrailers(self, data):
+    def __init__(self, baseURL, relativeURL, parsedURLS=None):
+        HTMLParser.__init__(self)
+        self.trailers = {}
+        self.dirtyURLS = set()
+        self.pos = 0
+        self.baseURL = baseURL
+        self.URL = baseURL + relativeURL
+        if not parsedURLS:
+            self.parsedURLS = set()
+        else:
+            self.parsedURLS = parsedURLS
+        self.parsedURLS.add(relativeURL)
+
+    def getTrailers(self):
         """Returns dictionary with trailer names as keys and list of
         trailer urls as values. Each trailer can have more links due
         to different qualities.
@@ -191,49 +202,48 @@ class WebIncParser(HTMLParser):
         Example:
         {'Trailer':['url1','url2'],'Featurette':['url1','url2']}
         """
-        self.trailers = {}
-        self.dirtyURLS = []
-        self.next_title = None
+        response = urllib.request.urlopen(self.URL)
+        logging.info("Processing: " + self.URL)
+        data = response.read().decode('utf-8')
+
         self.pos = 0
         self.feed(data)
         self.close()
-        if len(self.trailers) == 1:
-            val = self.trailers[list(self.trailers.keys())[0]]
-            if len(val) == 0:
-                self.trailers[list(self.trailers.keys())[0]] = self.dirtyURLS
+        if not self.trailers:
+            return self.dirtyURLS
+
         return self.trailers
 
-    def _add_url(self, name, url):
-        if self.pos == self.URLS:
-            self.trailers[name].append(url)
-        else:
-            self.dirtyURLS.append(url)
-
     def handle_starttag(self, tag, attrs):
+        nested_includes = ()
         if tag.lower() == 'h3':
+            for name, val in attrs:
+                if name == 'title' and self.dirtyURLS:
+                    self.trailers[val]=self.dirtyURLS
+                    self.dirtyURLS = set()
             self.pos = self.H3
         elif tag.lower() == 'a':
             for name, val in attrs:
-                if name == 'href' and val.find('.mov') != -1:
-                    url = val
-                    subPos = url.rfind('_')
-                    if subPos == url.rfind('_h.'):
-                        url = re.sub('(.*)/([^/]*)_h.([^/]*mov).*',r'\1/\2_h\3', url)
-                    else:
-                        url = re.sub('(.*)/([^/]*)_([^/]*mov).*',r'\1/\2_h\3', url)
+                if name == 'href':
+                    if val.find('.mov') != -1:
+                        url = val
+                        subPos = url.rfind('_')
+                        if subPos == url.rfind('_h.'):
+                            url = re.sub('(.*)/([^/]*)_h.([^/]*mov).*',r'\1/\2_h\3', url)
+                        else:
+                            url = re.sub('(.*)/([^/]*)_([^/]*mov).*',r'\1/\2_h\3', url)
 
-                    url = re.sub('_hh','_h', url)
-                    url = re.sub('h640','h640w', url)
-                    self._add_url(self.next_title, url)
-
-    def handle_data(self, data):
-        if self.pos == self.H3:
-            if data in list(self.trailers.keys()):
-                self.handle_data("%s_1" % data)
-            self.trailers[data]=[]
-            self.next_title = data
-
-    def handle_endtag(self, tag):
-        if tag.lower() == 'h3':
-            self.pos = self.URLS
-
+                        url = re.sub('_hh','_h', url)
+                        url = re.sub('h640','h640w', url)
+                        logging.info("Found trailer url: " + url)
+                        self.dirtyURLS.add(url)
+                    elif val.startswith('includes'):
+                        if val in self.parsedURLS:
+                            continue
+                        wip = WebIncParser(self.baseURL, val, self.parsedURLS)
+                        self.parsedURLS = wip.parsedURLS
+                        ret = wip.getTrailers()
+                        if type(ret) == set:
+                            self.dirtyURLS.update(ret)
+                        else:
+                            self.trailers = ret
